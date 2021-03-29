@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.1.4
+// @version     0.1.6
 // @author      一个北七
-// @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载
-// @icon        https://pic.17qq.com/uploads/ijfjjpgfpjz.jpeg
+// @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
+// @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
 // @created     2021/3/13 下午6:23:05
-// @match       http*://cloud.189.cn/*
+// @include     http*://cloud.189.cn/*
 // @noframes
 // @require     https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js
 // @require     https://cdn.jsdelivr.net/npm/sweetalert2@10.15.5/dist/sweetalert2.all.min.js
@@ -15,7 +15,8 @@
 // @grant       GM_registerMenuCommand
 // @grant       GM_setValue
 // @grant       GM_getValue
-// @note        V0.1.4      修复全选下载问题; 修复浏览器兼容问题; 优化提示信息
+// @grant       GM_setClipboard
+// @note        V0.1.6    更换图标；新增逐个文件/文件夹直接下载功能；新增打包下载时根据情况复制文件名功能
 // ==/UserScript==
 
 void function() {
@@ -26,7 +27,7 @@ void function() {
     
     let t = {
         clog(msg) {
-                console.group('[突破天翼云盘下载限制]');
+                console.group('[雷利子]');
                 for (let m of arguments) {
                     if (void 0 !== m) console.log(m);
                 }
@@ -43,6 +44,10 @@ void function() {
         
         registerMenu(title, func) {
             return GM_registerMenuCommand(title, func);
+        },
+        
+        copy(text, type='text/plain') {
+            GM_setClipboard(text, type);
         },
         
         increase() {
@@ -81,9 +86,9 @@ void function() {
             }
         },
         
-        info(title, text, icon='info', timer=2000) {
+        info(title, text, icon='info', position='top', timer=2000) {
             Swal.fire({
-                      position: 'top',
+                      position,
                       icon,
                       toast: true,
                       title,
@@ -95,7 +100,7 @@ void function() {
     };
     
     let success_times = t.get("success_times");
-    if (!success_times) t.set("success_times", 0);
+    if (!success_times || isNaN(success_times)) t.set("success_times", 0);
     t.subscribe();
     
     let main = {
@@ -164,10 +169,95 @@ void function() {
             return s.some( i => i.attributes.isFolder );
         },
         
-        foldersCount() {
-            let models = this.getFileList().models, count = 0;
-            for (let i of models) if (i.attributes.isFolder) count++;
-            return count;
+        getSelectedFolderName() {
+            let models = this.getFileList().selected(), folder = [];
+            for (let i of models) {
+                if (i.attributes.isFolder) {
+                    if (folder.length > 1) break;
+                    folder.push(i.attributes.fileName);
+                }
+            }
+            return folder;
+        },
+        
+        getFolderName() {
+            let models = this.getFileList().models, folder = [];
+            for (let i of models) {
+                if (i.attributes.isFolder) {
+                    if (folder.length > 1) break;
+                    folder.push(i.attributes.fileName);
+                }
+            }
+            return folder;
+        },
+        
+        copyFolderName() {
+            let name = '';
+            if ($('a.J_Download.disable').length < 1) {
+                let selected = this.getSelectedFolderName();
+                if (selected.length == 1) {
+                    name = selected[0];
+                }
+                
+                if ($('div.file-list-hd>.col-checkboxed').length && this.getFileList().selected().length > 1) {
+                    name = $('.breadcrumb em').text(); 
+                }
+                
+                if (name) {
+                    t.copy(name);
+                    setTimeout(() => {
+                        t.info('封印解除！', `已将目录名复制到剪贴板!`, 'success');
+                    }, 2000);
+                }
+            }
+        },
+        
+        download1by1() { 
+            let downloadLink = $('div.file-item-container:visible>.file-item'), timeout = 1000,
+            directDownload = () => {
+                for (let l of downloadLink) {
+                    setTimeout(() => {
+                        l.click();
+                        $('a.J_Download, #J_Download')[0].click();
+                    }, timeout);
+                    timeout += 1000;
+                }
+                
+                let name = this.getFolderName();
+                if (name.length == 1) {
+                    t.copy(name[0]); 
+                    t.info('封印解除！', `已将单一目录名复制到剪贴板!`, 'success');
+                }
+                
+                setTimeout(() => {
+                    $('div.col-checkboxed').removeClass('col-checkboxed');
+                    $('div.ui-selected').removeClass('ui-selected');
+                    this.getFileList().selected()[0].attributes.selected = false;
+                    $('div.selected-count>span').text(0);
+                    $('div.btn-group').hide();
+                }, timeout);
+            }
+            
+            if (downloadLink.length <= 5) {
+                directDownload();
+            } else {
+                Swal.fire({
+                          title: '文件数量超过5',
+                          html: `<p style="color: red">是否全部逐一下载？</p>`,
+                          icon: 'warning',
+                          showCancelButton: true,
+                          allowOutsideClick: false,
+                          confirmButtonColor: '#d33',
+                          confirmButtonText: '确定全部下载',
+                          cancelButtonColor: '#3085d6',
+                          cancelButtonText: '取消下载',
+                        }).then((result) => {
+                          if (result.isConfirmed) {
+                              directDownload();
+                              t.info('封印解除！', '全部文件开始逐一下载', 'success');
+                          }
+                        });
+            }
         },
         
         showInfo() {
@@ -236,7 +326,7 @@ void function() {
             });
             
             $('.file-list-hd .col-checkbox').on('click', () => {
-                    setTimeout(() => {        
+                    setTimeout(() => {
                         $('.file-list-container div.btn-group .dropdown').css('width','320px');
                         $('a.J_Download').css(buttonStyle).text(buttonText);
                     }, 2000);
@@ -249,6 +339,7 @@ void function() {
             $('a.J_Download, #J_Download').on('click', () => {
                 this.enableButton();
                 this.securityOn();
+                this.copyFolderName();
                 this.showInfo();
             });
             
@@ -261,7 +352,41 @@ void function() {
                 setTimeout(() => {
                     this.changeButton();
                 }, 1000);
+                this.addButton();
             });
+            
+            $('a.allfile').on('click', () => {
+                setTimeout(() => {
+                    this.addButton();
+                }, 1000);
+            });
+            
+            this.addButton();
+        },
+        
+        addButton() {
+            let downloadLink = $('div.file-item-container:visible>.file-item');
+            let newButton = this.newButton, name = this.getFolderName();
+            
+            if (downloadLink.length > 1 && name.length <= 1) {
+                let operate = $('a.btn-save-as');
+                if (operate.length && !$('#J_download1by1').length) {
+                    this.newButton = $('<a href="javascript:;" id="J_download1by1" class="btn" style="background-color: #f0424f; color: white; width: 80px; margin-right: 10px">逐个下载</a>')
+                    operate.before(this.newButton);
+                }
+                
+                let bar = $('div.toolbar>.btn-group');
+                if (bar.length && !$('#J_download1by1').length) {
+                    this.newButton = $('<a href="javascript:;" id="J_download1by1" class="btn" style="background-color: #f0424f; color: white">逐个下载</a>')
+                    bar.append(this.newButton);
+                }
+                
+                $('#J_download1by1').on('click', () => {
+                   this.download1by1();
+                });
+                
+            } else if (newButton) newButton.remove();
+            
         },
         
         changeButton() {
@@ -279,18 +404,11 @@ void function() {
             }
         },
         
-        blast() {
-            this.enableButton();
-            this.breakSize();
-            this.downloadFile();
-        },
-                
         isLogin() {
             return unsafeWindow.application.headerView.isLogin;
         },
         
         init() {
-            
             setTimeout(() => {
                 if (this.isLogin()) {
                     this.changeButton();
@@ -299,7 +417,6 @@ void function() {
                     Swal.fire('请先登录!', '必须登录才能突破下载限制', 'error');
                 }
             }, 2500);
-            
         },
     };
     
