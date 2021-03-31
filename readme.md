@@ -28,7 +28,7 @@
 
 - [x] 支持**单选、多选、全选**文件直接下载
 
-- [x] 新增逐个下载文件功能
+- [x] 新增**逐个下载**文件功能
 
 - [x] 新增逐个下载文件和单个文件夹并复制目录名称功能
 
@@ -40,6 +40,8 @@
 ## 特别说明
 
 * 取消兼容`Greasemonkey`油猴子扩展，因为跟另外两款油猴插件（Tampermonkey，Violentmonkey）的`API`差异有点大
+* 请使用**IDM**或**浏览器内置下载器**下载，迅雷不支持打包下载
+ ![img](https://gitee.com/oneNorth7/pics/raw/master/picgo/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD.jpg) ![img](https://gitee.com/oneNorth7/pics/raw/master/picgo/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD%E6%94%AF%E6%8C%81.jpg) ![img](https://article-fd.zol-img.com.cn/g5/M00/0F/01/ChMkJlqv1laIUgEPAAC3xYYNrN4AAm23ALlmIEAALfd472.jpg)
 
 ## 使用说明及演示
 
@@ -51,11 +53,11 @@
 
 重要的事情说三遍，注册云盘帐号只是分分钟的事情（**移动、电信、联通手机号**均可）。
 
-脚本已在`Firefox`和`Chrome`下测试通过，暂未发现会与其他脚本冲突的情况；支持单文件分享页面、多文件分享页面或个人主页单选、多选或全选文件**直接下载**。
+脚本已在`Firefox`和`Chrome`、``Edge`下测试通过，暂未发现会与其他脚本冲突的情况；支持单文件分享页面、多文件分享页面或个人主页单选、多选或全选文件**直接下载**。
 
 本人郑重声明：**本脚本不存在任何操作或盗取个人Cookie的行为，获取下载链接是调用天翼云官方方法（点击原有下载按钮），只是在调用时突破限制和改变按钮样式（方便识别）而已，欢迎大家监督**。
 
-* 启用“雷利子”脚本后，未登录帐号会提示**请先登录**，必须登录才能突破下载限制
+* 启用“雷利子”脚本后，未登录帐号会提示”**请先登录**，必须登录才能突破下载限制“
   ![请先登录](https://gitee.com/oneNorth7/pics/raw/master/picgo/请先登录.jpg)
 
 * 单文件分享页面
