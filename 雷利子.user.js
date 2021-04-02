@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.1.6
+// @version     0.1.7
 // @author      一个北七
 // @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -16,7 +16,7 @@
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_setClipboard
-// @note        V0.1.6    更换图标；新增逐个文件/文件夹直接下载功能；新增打包下载时根据情况复制文件名功能
+// @note        V0.1.7    优化加载机制和速度
 // ==/UserScript==
 
 void function() {
@@ -150,7 +150,7 @@ void function() {
             if (fileSize >= sizeLimit) {
                 if (void 0 !== m.attributes.firstFileSize) m.attributes.firstFileSize = sizeLimit - 1;
                 else m.attributes.originFileSize = sizeLimit - 1;
-                return '成功突破文件大小限制!';
+                return '成功突破文件大小限制！';
             }
             return '';
         },
@@ -206,7 +206,7 @@ void function() {
                 if (name) {
                     t.copy(name);
                     setTimeout(() => {
-                        t.info('封印解除！', `已将目录名复制到剪贴板!`, 'success');
+                        t.info('封印解除！', `已将目录名复制到剪贴板！`, 'success');
                     }, 2000);
                 }
             }
@@ -226,7 +226,7 @@ void function() {
                 let name = this.getFolderName();
                 if (name.length == 1) {
                     t.copy(name[0]); 
-                    t.info('封印解除！', `已将单一目录名复制到剪贴板!`, 'success');
+                    t.info('封印解除！', `已将单一目录名复制到剪贴板！`, 'success');
                 }
                 
                 setTimeout(() => {
@@ -275,15 +275,15 @@ void function() {
                     }
                     if (fileIdList) {
                         if (fileIdList.includes(',') ) {
-                            msg += '成功突破文件数量限制!';
+                            msg += '成功突破文件数量限制！';
                         } else {
                             msg += this.breakSingleSize(fileList.selected()[0]);
                         }
                     }
-                    if (this.isFolderSelected()) msg = msg ? msg.replace('限制', '和文件夹限制') : '成功突破文件夹限制!';
+                    if (this.isFolderSelected()) msg = msg ? msg.replace('限制', '和文件夹限制') : '成功突破文件夹限制！';
                     break;
                 case 1:
-                        msg += '成功突破文件大小限制!';
+                        msg += '成功突破文件大小限制！';
                     break;
             }
             t.increase();
@@ -405,18 +405,29 @@ void function() {
         },
         
         isLogin() {
-            return unsafeWindow.application.headerView.isLogin;
+            return unsafeWindow.application && unsafeWindow.application.headerView.isLogin;
         },
         
         init() {
             setTimeout(() => {
-                if (this.isLogin()) {
-                    this.changeButton();
-                    t.clog('加载成功!');
-                } else {
-                    Swal.fire('请先登录!', '必须登录才能突破下载限制', 'error');
-                }
-            }, 2500);
+                let count = 0, result = unsafeWindow.fileId || unsafeWindow.appRouter || unsafeWindow.mainView;
+                let tid = setInterval(() => {
+                    count++;
+                    if (this.isLogin() && result) {
+                        this.changeButton();
+                        t.clog('加载成功！');
+                        t.info('雷利子','封印解除！', 'success');
+                        clearInterval(tid);
+                    } else if (this.isLogin() === false || $('div.login-pannel').length > 0) {
+                        Swal.fire('请先登录！', '必须登录才能突破下载限制', 'error');
+                        clearInterval(tid);
+                    }
+                    if (count == 5) {
+                        clearInterval(tid);
+                        Swal.fire('请先登录！', '必须登录才能突破下载限制', 'error');
+                    }
+                }, 1000);
+            }, 1000);
         },
     };
     
