@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.1.7
+// @version     0.1.8
 // @author      一个北七
 // @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -16,7 +16,7 @@
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_setClipboard
-// @note        V0.1.7    优化加载机制和速度
+// @note        V0.1.8    修复填写密码前后的脚本加载问题
 // ==/UserScript==
 
 void function() {
@@ -409,25 +409,39 @@ void function() {
         },
         
         init() {
-            setTimeout(() => {
-                let count = 0, result = unsafeWindow.fileId || unsafeWindow.appRouter || unsafeWindow.mainView;
-                let tid = setInterval(() => {
-                    count++;
-                    if (this.isLogin() && result) {
-                        this.changeButton();
-                        t.clog('加载成功！');
-                        t.info('雷利子','封印解除！', 'success');
-                        clearInterval(tid);
-                    } else if (this.isLogin() === false || $('div.login-pannel').length > 0) {
-                        Swal.fire('请先登录！', '必须登录才能突破下载限制', 'error');
-                        clearInterval(tid);
-                    }
-                    if (count == 5) {
-                        clearInterval(tid);
-                        Swal.fire('请先登录！', '必须登录才能突破下载限制', 'error');
-                    }
-                }, 1000);
-            }, 1000);
+            if (!$('#code_txt').length) {
+                setTimeout(() => {
+                    // console.log($('div.login-pannel'));
+                    let count = 0, result;
+                    let tid = setInterval(() => {
+                        count++;
+                        result = unsafeWindow.fileId || unsafeWindow.appRouter || unsafeWindow.mainView;
+                        // console.log(result);
+                        if (this.isLogin() && result) {
+                            this.changeButton();
+                            clearInterval(tid);
+                            t.clog('加载成功！');
+                            t.info('雷利子','封印解除！', 'success');
+                        } else if (this.isLogin() === false) {
+                            clearInterval(tid);
+                            Swal.fire('请先登录！', '必须登录才能突破下载限制', 'error');
+                        } else if ($('div.login-pannel').length > 0) {
+                            clearInterval(tid);
+                        }
+                        
+                        if (count == 5) {
+                            clearInterval(tid);
+                            Swal.fire('雷利子', '加载超时，请刷新页面重试！', 'error');
+                        }
+                        console.log(count);
+                    }, 1000);
+                }, 1500);
+            } else {
+                t.info('推荐使用<链接助手>', '自动填写网盘密码');
+                $('a.btn-primary').click(() => {
+                    setTimeout(() => location.reload(), 500);
+                })
+            }
         },
     };
     
