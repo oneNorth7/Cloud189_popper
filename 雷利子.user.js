@@ -300,6 +300,7 @@ void function() {
                 $('a.download-link').css(buttonStyle).text(buttonText);
                 this.showInfo();
             }
+            
             this.hideTip();
         },
         
@@ -387,6 +388,7 @@ void function() {
                 
             } else if (newButton) newButton.remove();
             
+            this.hideTip();
         },
         
         changeButton() {
@@ -411,12 +413,10 @@ void function() {
         init() {
             if (!$('#code_txt').length) {
                 setTimeout(() => {
-                    // console.log($('div.login-pannel'));
                     let count = 0, result;
                     let tid = setInterval(() => {
                         count++;
                         result = unsafeWindow.fileId || unsafeWindow.appRouter || unsafeWindow.mainView;
-                        // console.log(result);
                         if (this.isLogin() && result) {
                             this.changeButton();
                             clearInterval(tid);
