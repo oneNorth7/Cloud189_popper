@@ -40,6 +40,7 @@
 ## 特别说明
 
 * 取消兼容`Greasemonkey`油猴子扩展，因为跟另外两款油猴插件（Tampermonkey，Violentmonkey）的`API`差异有点大
+* 填写密码后为了保证脚本加载成功，会有一次延迟的页面刷新
 * 请使用**IDM**或**浏览器内置下载器**下载，迅雷不支持打包下载
  ![img](https://gitee.com/oneNorth7/pics/raw/master/picgo/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD.jpg) ![img](https://gitee.com/oneNorth7/pics/raw/master/picgo/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD%E6%94%AF%E6%8C%81.jpg) ![img](https://article-fd.zol-img.com.cn/g5/M00/0F/01/ChMkJlqv1laIUgEPAAC3xYYNrN4AAm23ALlmIEAALfd472.jpg)
 
@@ -126,6 +127,8 @@
   ![个人主页下载小bug](https://gitee.com/oneNorth7/pics/raw/master/picgo/个人主页下载小bug.gif)
 
 ## 更新历史
+
+* V0.2.0 - 优化页面类型判断逻辑
 
 * V0.1.9 - 图标浏览模式自动切换为列表浏览模式
 

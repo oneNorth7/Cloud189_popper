@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.1.9
+// @version     0.2.0
 // @author      一个北七
 // @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -16,7 +16,10 @@
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_setClipboard
+// @note        V0.2.0    优化页面类型判断逻辑
 // @note        V0.1.9    图标浏览模式自动切换为列表浏览模式
+// @note        V0.1.8    修复填写密码前后的脚本加载问题
+// @note        V0.1.7    优化加载机制和速度
 // ==/UserScript==
 
 void function() {
@@ -113,7 +116,7 @@ void function() {
             if (void 0 === this.panType) {
                 if (void 0 !== unsafeWindow.mainView) {
                     return this.panType = 0;
-                } else if (void 0 !== unsafeWindow.appRouter) {
+                } else if (void 0 !== unsafeWindow.appRouter && unsafeWindow.appRouter.mainView) {
                     return this.panType = 2;
                 } else {
                     return this.panType = 1;
@@ -414,6 +417,7 @@ void function() {
         
         init() {
             if (!$('#code_txt').length) {
+                $('#J_Notify').css('z-index', 1010);
                 setTimeout(() => {
                     let count = 0, result;
                     let tid = setInterval(() => {
@@ -435,9 +439,8 @@ void function() {
                             clearInterval(tid);
                             Swal.fire('雷利子', '加载超时，请刷新页面重试！', 'error');
                         }
-                        console.log(count);
                     }, 1000);
-                }, 1500);
+                }, 100);
             } else {
                 t.info('推荐使用<链接助手>', '自动填写网盘密码');
                 $('a.btn-primary').click(() => {
