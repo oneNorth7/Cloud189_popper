@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.1.8
+// @version     0.1.9
 // @author      一个北七
 // @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -16,7 +16,7 @@
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_setClipboard
-// @note        V0.1.8    修复填写密码前后的脚本加载问题
+// @note        V0.1.9    图标浏览模式自动切换为列表浏览模式
 // ==/UserScript==
 
 void function() {
@@ -395,12 +395,14 @@ void function() {
             let panType = this.getPanType();
             switch(panType) {
                 case 0:
+                    if ($('#J_SwitchMode').text() == '列表') $('#J_SwitchMode')[0].click();
                     this.changeStyleZero();
                     break;
                 case 1:
                     this.changeStyleOne();
                     break;
                 case 2:
+                    if ($('span.J_DropdownToggleContent').text() == '图标') $('#J_ListMode')[0].click();
                     this.changeStyleTwo()
                     break;
             }
@@ -440,7 +442,12 @@ void function() {
                 t.info('推荐使用<链接助手>', '自动填写网盘密码');
                 $('a.btn-primary').click(() => {
                     setTimeout(() => location.reload(), 500);
-                })
+                });
+                
+                $('#code_txt').focus(() => {
+                    if ($('div.link-helper').length) $('div.link-helper').show();
+                    else $('div.access-code-item').append('<div class="link-helper tips-save-box" style="left:50px;top:200px;visibility:visible;position:absolute;display:inline-block;"><p style="font-size:16px;">试试能自动填写网盘密码的👉<a target="_blank" href="https://greasyfork.org/zh-CN/scripts/422773-%E9%93%BE%E6%8E%A5%E5%8A%A9%E6%89%8B" style="color:#36BE63;position:relative;display:inline;top:0;left:0;text-decoration:underline;">链接助手</a></p><img src="../source/images/tips_save.png"><a href="javascript:;" title="关闭"></a></div>');
+                });
             }
         },
     };
