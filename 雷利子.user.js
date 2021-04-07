@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.2.0
+// @version     0.2.1
 // @author      一个北七
 // @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -16,6 +16,7 @@
 // @grant       GM_setValue
 // @grant       GM_getValue
 // @grant       GM_setClipboard
+// @note        V0.2.1    修复内容审核不通过页面的脚本加载问题
 // @note        V0.2.0    优化页面类型判断逻辑
 // @note        V0.1.9    图标浏览模式自动切换为列表浏览模式
 // @note        V0.1.8    修复填写密码前后的脚本加载问题
@@ -59,7 +60,7 @@ void function() {
         },
 
         subscribe() {
-            let isFollowed = t.get('isFollowed', false), least_times = t.get('least_times', 100);
+            let isFollowed = this.get('isFollowed', false), least_times = this.get('least_times', 66);
             success_times = +this.get("success_times");
             if (success_times > least_times && !isFollowed) {
                 Swal.fire({
@@ -83,10 +84,10 @@ void function() {
                               showConfirmButton: false,
                               timer: 2000
                             });
-                            t.set('isFollowed', true);
-                          } else t.set('least_times', least_times + 50);
+                            this.set('isFollowed', true);
+                          } else this.set('least_times', least_times + 50);
                         });
-            }
+            } else flag = true;
         },
         
         info(title, text, icon='info', position='top', timer=2000) {
@@ -102,7 +103,7 @@ void function() {
         },
     };
     
-    let success_times = t.get("success_times");
+    let success_times = t.get("success_times"), flag = false;
     if (!success_times || isNaN(success_times)) t.set("success_times", 0);
     t.subscribe();
     
@@ -427,11 +428,11 @@ void function() {
                             this.changeButton();
                             clearInterval(tid);
                             t.clog('加载成功！');
-                            t.info('雷利子','封印解除！', 'success');
+                            if (flag) t.info('雷利子','封印解除！', 'success');
                         } else if (this.isLogin() === false) {
                             clearInterval(tid);
                             Swal.fire('请先登录！', '必须登录才能突破下载限制', 'error');
-                        } else if ($('div.login-pannel').length > 0) {
+                        } else if ($('div.login-pannel').length > 0 || $('div.error-content').length > 0) {
                             clearInterval(tid);
                         }
                         
@@ -440,7 +441,7 @@ void function() {
                             Swal.fire('雷利子', '加载超时，请刷新页面重试！', 'error');
                         }
                     }, 1000);
-                }, 100);
+                }, 1000);
             } else {
                 t.info('推荐使用<链接助手>', '自动填写网盘密码');
                 $('a.btn-primary').click(() => {
