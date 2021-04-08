@@ -60,7 +60,17 @@
 
 重要的事情说三遍，注册云盘帐号只是分分钟的事情（**移动、电信、联通手机号**均可）。
 
-脚本已在`Firefox`和`Chrome`、``Edge`下测试通过，暂未发现会与其他脚本冲突的情况；支持单文件分享页面、多文件分享页面或个人主页单选、多选或全选文件**直接下载**。
+脚本已在`Firefox`和`Chrome`、``Edge`下测试通过，暂未发现会与其他脚本冲突的情况；支持单文件分享页面、多文件分享页面或个人主页单选、多选或全选文件**直接下载**；逐个文件直接下载并根据情况复制目录名称。
+
+安装扩展可根据浏览器类别点击下方的链接直达扩展页面：
+
+- Chrome：[Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) 或 [Violentmonkey](https://chrome.google.com/webstore/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag)（谷歌商店）、[Tampermonkey](https://www.crx4chrome.com/extensions/dhdgffkkebhmkfjojejmpbldmpobfkfo) 或 [Violentmonkey](https://www.crx4chrome.com/extensions/jinjaccalgkegednnccohejagnlnfdag)（镜像站）
+
+- Firefox：[Tampermonkey](https://addons.mozilla.org/firefox/addon/tampermonkey/) 或 [Violentmonkey](https://addons.mozilla.org/firefox/addon/violentmonkey/)
+
+- Edge：[Tampermonkey](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd) 或 [暴力猴](https://microsoftedge.microsoft.com/addons/detail/%E6%9A%B4%E5%8A%9B%E7%8C%B4/eeagobfjdenkkddmbclomhiblgggliao)
+
+大多数国产浏览器可到镜像站下载Chrome的扩展文件后拖入扩展管理页面进行安装，对于商店自带的移植版扩展未经测试不能保证兼容性，可发反馈或issue一起讨论研究。
 
 本人郑重声明：**本脚本不存在任何操作或盗取个人Cookie的行为，获取下载链接是调用天翼云官方方法（点击原有下载按钮），只是在调用时突破限制和改变按钮样式（方便识别）而已，欢迎大家监督**。
 
