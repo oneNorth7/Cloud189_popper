@@ -40,7 +40,9 @@
 ## 特别说明
 
 * 取消兼容`Greasemonkey`油猴子扩展，因为跟另外两款油猴插件（Tampermonkey，Violentmonkey）的`API`差异有点大
-* **填写密码后为了保证脚本加载成功，会有一次延迟的页面刷新**
+
+* **填写密码后为了保证脚本加载成功，会有一次延迟的页面刷新**，**强烈建议**搭配本人写的[链接助手](https://greasyfork.org/zh-CN/scripts/422773-链接助手)使用
+
 * 请使用**IDM**或**浏览器内置下载器**下载，迅雷不支持打包下载
  ![img](https://gitee.com/oneNorth7/pics/raw/master/picgo/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD.jpg) ![img](https://gitee.com/oneNorth7/pics/raw/master/picgo/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD%E6%94%AF%E6%8C%81.jpg) ![img](https://article-fd.zol-img.com.cn/g5/M00/0F/01/ChMkJlqv1laIUgEPAAC3xYYNrN4AAm23ALlmIEAALfd472.jpg)
 
@@ -60,7 +62,7 @@
 
 重要的事情说三遍，注册云盘帐号只是分分钟的事情（**移动、电信、联通手机号**均可）。
 
-脚本已在`Firefox`和`Chrome`、``Edge`下测试通过，暂未发现会与其他脚本冲突的情况；支持单文件分享页面、多文件分享页面或个人主页单选、多选或全选文件**直接下载**；逐个文件直接下载并根据情况复制目录名称。
+脚本已在`Firefox`和`Chrome`、`Edge`下测试通过，暂未发现会与其他脚本冲突的情况；支持单文件分享页面、多文件分享页面或个人主页单选、多选或全选文件**直接下载**；逐个文件直接下载并根据情况复制目录名称。
 
 安装扩展可根据浏览器类别点击下方的链接直达扩展页面：
 
@@ -143,6 +145,11 @@
   ![个人主页下载小bug](https://gitee.com/oneNorth7/pics/raw/master/picgo/个人主页下载小bug.gif)
 
 ## 更新历史
+
+* V0.2.4 - 优化sweetalert2弹窗提示的背景显示问题
+
+* V0.2.3 - 优化填写密码跳转后页面的自动刷新功能
+* V0.2.2 - 修复内容审核不通过页面和天翼云盘主页未登录时脚本加载问题
 
 * V0.2.1 - 修复内容审核不通过页面的脚本加载问题
 
