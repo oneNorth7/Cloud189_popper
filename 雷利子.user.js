@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.2.6
+// @version     0.2.7
 // @author      一个北七
 // @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -58,7 +58,7 @@ void function() {
         },
 
         subscribe() {
-            let isFollowed = this.get('isFollowed', false), least_times = this.get('least_times', 30);
+            let isFollowed = this.get('isFollowed', false), least_times = this.get('least_times', 20);
             success_times = +this.get("success_times");
             if (success_times > least_times && !isFollowed) {
                 Swal.fire({
@@ -83,7 +83,7 @@ void function() {
                               timer: 2000
                             });
                             this.set('isFollowed', true);
-                          } else this.set('least_times', least_times + 30);
+                          } else this.set('least_times', least_times + 15);
                         });
             } else flag = true;
         },
@@ -432,7 +432,7 @@ void function() {
                         } else if (this.isLogin() === false) {
                             clearInterval(tid);
                             Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info')
-                                .then((result) => {
+                                .then(result => {
                                     if (result.isConfirmed) {
                                         let account = $('#J_UserAccount');
                                         if (account.text() == '\u767b\u5f55') account.click();
@@ -444,7 +444,7 @@ void function() {
                         if (count == 5) {
                             clearInterval(tid);
                             Swal.fire('\u96f7\u5229\u5b50', '\u52a0\u8f7d\u8d85\u65f6\uff0c\u8bf7\u5237\u65b0\u9875\u9762\u91cd\u8bd5\uff01', 'error')
-                                .then((result) => {
+                                .then(result => {
                                     if (result.isConfirmed) {
                                         location.reload();
                                     }
@@ -456,7 +456,21 @@ void function() {
             } else {
                 t.info('\u63a8\u8350\u4f7f\u7528<\u94fe\u63a5\u52a9\u624b>', '\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801');
                 $('a.btn-primary').click(() => {
-                    setTimeout(() => { if ($('div.file-item-container').children().length) location.reload(); }, 500);
+                    setTimeout(() => {
+                        if ($('div.file-item-container').children().length) {
+                            if (this.isLogin()) location.reload();
+                            else {
+                                Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info')
+                                .then(result => {
+                                    if (result.isConfirmed) {
+                                        let account = $('#J_UserAccount');
+                                        if (account.text() == '\u767b\u5f55') account.click();
+                                    }
+                                });
+                                $('body').removeClass('swal2-height-auto');
+                            }
+                        }
+                    }, 500);
                 });
                 
                 $('#code_txt').one('focus', () => {
