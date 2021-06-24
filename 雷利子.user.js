@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.2.7
+// @version     0.2.9
 // @author      一个北七
-// @description 简单突破天翼云盘网页版文件下载的大小, 多文件, 文件夹限制; 单选、多选、全选文件直接下载; 逐个文件直接下载并根据情况复制目录名称
+// @description 突破新版天翼云盘网页版单文件、多文件分享页、个人主页的文件大小下载限制
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
 // @created     2021/3/13 下午6:23:05
 // @include     http*://cloud.189.cn/*
@@ -23,17 +23,17 @@
 
 void function() {
     'use strict';
-    const sizeLimit = 50 * 1<<10 * 1<<10;
+    const sizeLimit = 1024 * 1<<10 * 1<<10;
     const buttonText = '\u76f4\u63a5\u4e0b\u8f7d';
     const buttonStyle = {'background-color': '#36BE63', 'color': 'white'};
     
     let t = {
         clog() {
-            console.group('[\u96f7\u5229\u5b50]');
-            for (let m of arguments) {
-                if (void 0 !== m) console.log(m);
-            }
-            console.groupEnd();
+                console.group('[\u96f7\u5229\u5b50]');
+                for (let m of arguments) {
+                    if (void 0 !== m) console.log(m);
+                }
+                console.groupEnd();
         },
         
         set(name, value) {
@@ -53,13 +53,14 @@ void function() {
         },
         
         increase() {
-            success_times = +this.get("success_times") + 1;
+            success_times = +this.get("success_times", 0) + 1;
             this.set("success_times", success_times);
         },
 
         subscribe() {
-            let isFollowed = this.get('isFollowed', false), least_times = this.get('least_times', 20);
-            success_times = +this.get("success_times");
+            let isFollowed = this.get('isFollowed', false),
+                least_times = this.get('least_times', 20),
+                success_times = +this.get("success_times");
             if (success_times > least_times && !isFollowed) {
                 Swal.fire({
                           title: '\u5173\u6ce8\u516c\u4f17\u53f7\uff0c\u4e0d\u8ff7\u8def\uff01',
@@ -88,8 +89,9 @@ void function() {
             } else flag = true;
         },
         
-        info(title, text, icon='info', position='top', timer=2000) {
-            Swal.fire({
+        info(text, icon='success', title = '\u96f7\u5229\u5b50', position='top', timer=2000) {
+            if (icon == 'error') timer = timer == 2000 ? 3000 : timer;
+            return Swal.fire({
                       position,
                       icon,
                       toast: true,
@@ -105,368 +107,237 @@ void function() {
     if (!success_times || isNaN(success_times)) t.set("success_times", 0);
     t.subscribe();
     
+    const o = location.origin,
+              h = location.host,
+              hr = location.href,
+              ha = location.hash,
+              s = location.search;
+    const api = ['/api/open/user/getUserInfoForPortal.action',
+                 '/api/open/share/getShareInfoByCode.action',
+                 '/api/open/file/getFileDownloadUrl.action',
+                 '/api/portal/listFiles.action'];
+    
     let main = {
-        enableButton: function() {
-            $('.download-link').removeClass('disable');
-            $('.btn-download').removeClass('disable');
-        },
-        
-        getPanType() {
-            if (void 0 === this.panType) {
-                if (void 0 !== unsafeWindow.mainView) {
-                    return this.panType = 0;
-                } else if (void 0 !== unsafeWindow.appRouter && unsafeWindow.appRouter.mainView) {
-                    return this.panType = 2;
-                } else {
-                    return this.panType = 1;
-                }
-            } else return this.panType;
-        },
-        
-        getView() {
-            let panType = this.getPanType();
-            switch(panType) {
-                case 0:
-                    return unsafeWindow.mainView.fileListTabObj[unsafeWindow.mainView.options.fileId].fileListView;
-                case 1:
-                    return null;
-                case 2:
-                    return unsafeWindow.appRouter.mainView;
-            }
-        },
-        
-        getFileList() {
-            let panType = this.getPanType();
-            switch(panType) {
-                case 0:
-                    return unsafeWindow.mainView.fileListTabObj[unsafeWindow.mainView.options.fileId].fileList;
-                case 1:
-                    return null;
-                case 2:
-                    return unsafeWindow.appRouter.mainView.fileList;
-            }
-        },
-        
-        breakSingleSize(m) {
-            let fileSize = m.attributes.firstFileSize || m.attributes.originFileSize;
-            if (fileSize >= sizeLimit) {
-                if (void 0 !== m.attributes.firstFileSize) m.attributes.firstFileSize = sizeLimit - 1;
-                else m.attributes.originFileSize = sizeLimit - 1;
-                return '\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u9650\u5236\uff01';
-            }
-            return '';
-        },
-        
-        getFileIdList(view) {
-            return view && ( view.getFileIdList && view.getFileIdList() || view.collection && view.collection.getFileIdList() );
-        },
-        
-        securityOn() {
-            if (void 0 !== unsafeWindow.mainView)
-                unsafeWindow.mainView.options.isSecurity = true;
-        },
-        
-        isFolderSelected() {
-            let s = this.getFileList().selected();
-            return s.some( i => i.attributes.isFolder );
-        },
-        
-        getSelectedFolderName() {
-            let models = this.getFileList().selected(), folder = [];
-            for (let i of models) {
-                if (i.attributes.isFolder) {
-                    if (folder.length > 1) break;
-                    folder.push(i.attributes.fileName);
-                }
-            }
-            return folder;
-        },
-        
-        getFolderName() {
-            let models = this.getFileList().models, folder = [];
-            for (let i of models) {
-                if (i.attributes.isFolder) {
-                    if (folder.length > 1) break;
-                    folder.push(i.attributes.fileName);
-                }
-            }
-            return folder;
-        },
-        
-        copyFolderName() {
-            let name = '';
-            if ($('a.J_Download.disable').length < 1) {
-                let selected = this.getSelectedFolderName();
-                if (selected.length == 1) {
-                    name = selected[0];
-                }
-                
-                if ($('div.file-list-hd>.col-checkboxed').length && this.getFileList().selected().length > 1) {
-                    name = $('.breadcrumb em').text(); 
-                }
-                
-                if (name) {
-                    t.copy(name);
-                    setTimeout(() => {
-                        t.info('\u5c01\u5370\u89e3\u9664\uff01', '\u5df2\u5c06\u5355\u4e00\u76ee\u5f55\u540d\u590d\u5236\u5230\u526a\u8d34\u677f\uff01', 'success');
-                    }, 2000);
-                }
-            }
-        },
-        
-        download1by1() { 
-            let downloadLink = $('div.file-item-container:visible>.file-item'), timeout = 1000,
-            directDownload = () => {
-                for (let l of downloadLink) {
-                    setTimeout(() => {
-                        l.click();
-                        $('a.J_Download, #J_Download')[0].click();
-                    }, timeout);
-                    timeout += 1000;
-                }
-                
-                let name = this.getFolderName();
-                if (name.length == 1) {
-                    t.copy(name[0]); 
-                    t.info('\u5c01\u5370\u89e3\u9664\uff01', '\u5df2\u5c06\u5355\u4e00\u76ee\u5f55\u540d\u590d\u5236\u5230\u526a\u8d34\u677f\uff01', 'success');
-                }
-                
-                setTimeout(() => {
-                    $('div.col-checkboxed').removeClass('col-checkboxed');
-                    $('div.ui-selected').removeClass('ui-selected');
-                    this.getFileList().selected()[0].attributes.selected = false;
-                    $('div.selected-count>span').text(0);
-                    $('div.btn-group').hide();
-                }, timeout);
-            }
-            
-            if (downloadLink.length <= 5) {
-                directDownload();
-            } else {
-                Swal.fire({
-                          title: '\u6587\u4ef6\u6570\u91cf\u8d85\u8fc75',
-                          html: '<p style="color: red">\u662f\u5426\u5168\u90e8\u9010\u4e00\u4e0b\u8f7d\uff1f</p>',
-                          icon: 'warning',
-                          showCancelButton: true,
-                          allowOutsideClick: false,
-                          confirmButtonColor: '#d33',
-                          confirmButtonText: '\u786e\u5b9a\u5168\u90e8\u4e0b\u8f7d',
-                          cancelButtonColor: '#3085d6',
-                          cancelButtonText: '\u53d6\u6d88\u4e0b\u8f7d',
-                        }).then((result) => {
-                          if (result.isConfirmed) {
-                              directDownload();
-                              t.info('\u5c01\u5370\u89e3\u9664\uff01', '\u5168\u90e8\u6587\u4ef6\u5f00\u59cb\u9010\u4e00\u4e0b\u8f7d', 'success');
-                          }
-                        });
-            }
-        },
-        
-        showInfo() {
-            let view = this.getView(),
-                fileIdList = this.getFileIdList(view),
-                fileList = this.getFileList(),
-                panType = this.getPanType(),
-                msg = '';
-            switch(panType) {
-                case 0:
-                case 2:
-                    if ($('a.J_Download').hasClass('disable')) {
-                        t.info('\u7cfb\u7edf\u751f\u6210\u6587\u4ef6\u5939', '\u65e0\u6cd5\u76f4\u63a5\u4e0b\u8f7d\uff0c\u8bf7\u8fdb\u5165\u6587\u4ef6\u5939\u4e0b\u8f7d\uff01');
-                        return ;
-                    }
-                    if (fileIdList) {
-                        if (fileIdList.includes(',') ) {
-                            msg += '\u6210\u529f\u7a81\u7834\u6587\u4ef6\u6570\u91cf\u9650\u5236\uff01';
-                        } else {
-                            msg += this.breakSingleSize(fileList.selected()[0]);
-                        }
-                    }
-                    if (this.isFolderSelected()) msg = msg ? msg.replace('\u9650\u5236', '\u548c\u6587\u4ef6\u5939\u9650\u5236') : '\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5939\u9650\u5236\uff01';
-                    break;
-                case 1:
-                        msg += '\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u9650\u5236\uff01';
-                    break;
-            }
-            t.increase();
-            if (msg) t.info('\u5c01\u5370\u89e3\u9664\uff01', msg, 'success');
-        },
-        
         hideTip() {
             $('div.tips-save-box').hide();
         },
         
-        changeStyleOne() {
-            if (unsafeWindow.fileSize >= sizeLimit) {
-                this.enableButton();
-                $('a.download-link').css(buttonStyle).text(buttonText);
-                this.showInfo();
-            }
-            
-            this.hideTip();
+        isLogin() {
+            return $('div.person-info').children().length != 2;
         },
         
-        changeStyleTwo() {
-            $('div.file-item').on('click', () => {
-                            $('#J_Download').css(buttonStyle).text(buttonText);
-                            this.hideTip();
-            });
-            
-            $('.file-list-hd .col-checkbox').on('click', () => {
-                        setTimeout(() => {
-                            $('#J_Download').css(buttonStyle).text(buttonText);
-                            this.hideTip();
-                        }, 2000);
-            });
-            
-            this.addListener();
-        },
-        
-        changeStyleZero() {
-            $('.file-item-container>.file-item').on('click', () => {     
-                        $('.file-list-container div.btn-group .dropdown').css('width','320px');
-                        $('a.J_Download').css(buttonStyle).text(buttonText);
-            });
-            
-            $('.file-list-hd .col-checkbox').on('click', () => {
-                    setTimeout(() => {
-                        $('.file-list-container div.btn-group .dropdown').css('width','320px');
-                        $('a.J_Download').css(buttonStyle).text(buttonText);
-                    }, 2000);
-            });
-            
-            this.addListener();
-        },
-        
-        addListener() {
-            $('a.J_Download, #J_Download').on('click', () => {
-                this.enableButton();
-                this.securityOn();
-                this.copyFolderName();
-                this.showInfo();
-            });
-            
-            $('div.file-item-container a.download-link').on('click', (obj) => {
-                $(obj.target).parents('div.file-item').click();
-                $('a.J_Download, #J_Download')[0].click();
-            });
-            
-            $('a.open-link, ul.breadcrumb a').on('click', () => {
-                setTimeout(() => {
-                    this.changeButton();
-                }, 1000);
-                this.addButton();
-            });
-            
-            $('a.allfile').on('click', () => {
-                setTimeout(() => {
-                    this.addButton();
-                }, 1000);
-            });
-            
-            this.addButton();
-        },
-        
-        addButton() {
-            let downloadLink = $('div.file-item-container:visible>.file-item');
-            let newButton = this.newButton, name = this.getFolderName();
-            
-            if (downloadLink.length > 1 && name.length <= 1) {
-                let operate = $('a.btn-save-as');
-                if (operate.length && !$('#J_download1by1').length) {
-                    this.newButton = $('<a href="javascript:;" id="J_download1by1" class="btn" style="background-color: #f0424f; color: white; width: 80px; margin-right: 10px">\u9010\u4e2a\u4e0b\u8f7d</a>');
-                    operate.before(this.newButton);
-                }
+        getFileInfo() {
+            let code = s.replace('?code=', '');
+            if (code) {
+                this._get(api[1], {shareCode: code},
+                    res => {
+                        if (res.isFolder) {
+                            this.multiShare(res.shareId);
+                            
+                            $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
+                                setTimeout(() => {
+                                    let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
+                                    button.remove();
+                                }, 500);
+                            });
+                            
+                        } else if(res.fileSize > sizeLimit){
+                            this.singleShare(res.fileId, res.shareId);
+                        } else
+                            $('a.btn-download').removeAttr('target').text(buttonText).css(buttonStyle);
+                    },
+                    err => {
+                        t.clog('error:', err);
+                    });
+            } else {
+                this.mainPage();
                 
-                let bar = $('div.toolbar>.btn-group');
-                if (bar.length && !$('#J_download1by1').length) {
-                    this.newButton = $('<a href="javascript:;" id="J_download1by1" class="btn" style="background-color: #f0424f; color: white">\u9010\u4e2a\u4e0b\u8f7d</a>');
-                    bar.append(this.newButton);
-                }
-                
-                $('#J_download1by1').on('click', () => {
-                   this.download1by1();
+                $('li.title-message,\
+                div.nav-logo,\
+                li.menu-item:contains(" \u4e91\u76d8 ")').on('click',
+                o => {
+                    setTimeout(() => this.mainPage(), 1000);
                 });
                 
-            } else if (newButton) newButton.remove();
+                $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
+                    setTimeout(() => {
+                        let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
+                        button.remove();
+                        
+                        let menu = $('div[class^="menu_menu-block-item_"]:contains("\u4e0b\u8f7d")');
+                        if (!$(`div[class^="menu_menu-block-item_"]:contains("${buttonText}")`).length) {
+                            let another = menu.clone().text(buttonText).click(this.directDownload);
+                            menu.replaceWith(another);
+                        }
+                    }, 500);
+                });
+            }
             
-            this.hideTip();
         },
         
-        changeButton() {
-            let panType = this.getPanType();
-            switch(panType) {
-                case 0:
-                    if ($('#J_SwitchMode').text() == '\u5217\u8868') $('#J_SwitchMode')[0].click();
-                    this.changeStyleZero();
-                    break;
-                case 1:
-                    this.changeStyleOne();
-                    break;
-                case 2:
-                    if ($('span.J_DropdownToggleContent').text() == '\u56fe\u6807') $('#J_ListMode')[0].click();
-                    this.changeStyleTwo()
-                    break;
+        directDownload(time = 1000, delay = 1000) {
+            let items = $('li.c-file-item.selected:not([data-isfolder])');
+            if (items.length) {
+                items.each((i, e) => {
+                    setTimeout(() => {
+                        $(e).find('span.file-item-ope-item-download').click();
+                    }, time += delay);
+                });
+            }
+            else t.info('\u9009\u4e2d\u4e3a\u6587\u4ef6\u5939\uff0c\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info');
+        },
+        
+        _get(url, data, success, error = () => {}) {
+            data.noCache = Math.random();
+            return $.ajax(url,
+                          {data,
+                           success,
+                           error,
+                           headers: {Accept: 'application/json;charset=UTF-8'}
+                          });
+        },
+        
+        singleShare(fileId, shareId) {
+            this._get(api[2], {fileId, shareId, dt: 1},
+                      res => {
+                        let link = $('a.btn-download').clone()
+                                    .prop('href', res.fileDownloadUrl)
+                                    .removeAttr('target')
+                                    .text(buttonText)
+                                    .css(buttonStyle);
+                        $('a.btn-download').replaceWith(link);
+                        t.increase();
+                        t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01');
+                     },
+                     err => {
+                        t.clog('error', err);
+                        t.info('\u83b7\u53d6\u4e0b\u8f7d\u76f4\u94fe\u5931\u8d25\uff01', 'error');
+                     });
+        },
+        
+        replaceDownload(o, shareId) {
+            let fileId = $(o.target).parents('li').attr('data-fileid');
+            let e = o.currentTarget, result = e.title.match(/&expired=(\d+)&/),
+                time = new Date(Number(result && result[1]));
+            if (time < new Date) {
+                this._get(api[2], {fileId, shareId, dt: 1},
+                          res => {
+                            let url = res.fileDownloadUrl
+                            $(e).data('href', url)
+                            let iframe = $(`<iframe src="${url}" style="display: none;"></iframe>`);
+                            $(document.head).append(iframe);
+                            if (Number($(e).parents('div.file-item-name').next().text().replace('G', '')) > 1) {
+                                t.increase();
+                                t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01');
+                            }
+                          },
+                          err => {
+                            $(e).parents('.file-item-ope').prev().css('color', '#f0424f');
+                            t.clog('error', err);
+                            t.info('\u83b7\u53d6\u4e0b\u8f7d\u76f4\u94fe\u5931\u8d25\uff01', 'error');
+                          });
+            } else {
+                let url = $(e).data('href'),
+                    iframe = $(`<iframe src="${url}" style="display: none;"></iframe>`);
+                $(document.head).append(iframe);
             }
         },
         
-        isLogin() {
-            return unsafeWindow.application && unsafeWindow.application.headerView.isLogin;
+        multiShare(shareId) {
+            $('ul.file-list-ul>li').each((i, e) => {
+                if ($(e).attr('data-isfolder')) {
+                    $(e).find('span.file-item-name-fileName-span').one('click',
+                    o => {
+                        setTimeout(() => {
+                            this.multiShare(shareId);
+                            
+                            $('div.FileListHead_file-list-nav_1Yc_- span[class^="FileListHead_file-list-nav-"]')
+                            .on('click', o => {
+                                setTimeout(() => this.multiShare(shareId), 1000);
+                            });
+                        }, 1000);
+                    });
+                } else {
+                        let span = $(e).find('span.file-item-ope-item-download'),
+                            another = span.clone().prop('title', buttonText).on('click', o => this.replaceDownload(o, shareId));
+                        span.replaceWith(another);
+                }
+            });
+        },
+        
+        mainPage() {
+            let folderId = location.pathname.match('/web/main/file/folder/(-?\\d+)$');
+                if(folderId) {
+                    let fileId = folderId[1];
+                    this._get(api[3], {fileId},
+                             res => {
+                                let {data} = res;
+                                if (data) {
+                                    for (let d of data) {
+                                        let li = $(`li[data-fileId="${d.fileId}"]`);
+                                        if (d.isFolder) {
+                                            let span = li.find('div.file-item-ope-item>span.file-item-ope-item-download');
+                                            if (span.length) {
+                                                let link = $('<a></a>').append(span.clone().prop('title', '\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01')).click(o => t.info('\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info'));
+                                                span.replaceWith(link);
+                                            }
+                                            
+                                            li.find('span.file-item-name-fileName-span').one('click', o => {
+                                                setTimeout(() => {
+                                                    this.mainPage();
+                                                    $('div.FileListHead_file-list-nav_1Yc_- span[class^="FileListHead_file-list-nav-"]')
+                                                    .on('click', o => {
+                                                        setTimeout(() => this.mainPage(), 1000);
+                                                    });
+                                                }, 1000);
+                                                
+                                            });
+                                            
+                                        } else {
+                                            let span = li.find('span.file-item-ope-item-download').prop('title', buttonText);
+                                            if (d.fileSize > sizeLimit) {
+                                                
+                                                let another = span.clone().click(o => {
+                                                    let iframe = $(`<iframe src="${d.downloadUrl}" style="display: none;"></iframe>`);
+                                                    $(document.head).append(iframe);
+                                                    t.increase();
+                                                    t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01');
+                                                });
+                                                span.replaceWith(another);
+                                            }
+                                        }
+                                    }
+                                }
+                             },
+                             err => {
+                                t.clog('error', err);
+                             });
+                }
         },
         
         init() {
-            if (!$('#code_txt').length) {
-                $('#J_Notify').css('z-index', 1010);
-                setTimeout(() => {
-                    let count = 0, result;
-                    let tid = setInterval(() => {
-                        count++;
-                        result = unsafeWindow.fileId || unsafeWindow.appRouter || unsafeWindow.mainView;
-                        if ($('div.login-pannel').length > 0 || $('div.error-content').length > 0) {
-                            clearInterval(tid);
-                        } else if (this.isLogin() && result) {
-                            this.changeButton();
-                            clearInterval(tid);
-                            t.clog('\u52a0\u8f7d\u6210\u529f\uff01');
-                            if (flag) t.info('\u96f7\u5229\u5b50','\u5c01\u5370\u89e3\u9664\uff01', 'success');
-                        } else if (this.isLogin() === false) {
-                            clearInterval(tid);
-                            Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info')
-                                .then(result => {
-                                    if (result.isConfirmed) {
-                                        let account = $('#J_UserAccount');
-                                        if (account.text() == '\u767b\u5f55') account.click();
-                                    }
-                                });
-                            $('body').removeClass('swal2-height-auto');
-                        }
-                        
-                        if (count == 5) {
-                            clearInterval(tid);
-                            Swal.fire('\u96f7\u5229\u5b50', '\u52a0\u8f7d\u8d85\u65f6\uff0c\u8bf7\u5237\u65b0\u9875\u9762\u91cd\u8bd5\uff01', 'error')
-                                .then(result => {
-                                    if (result.isConfirmed) {
-                                        location.reload();
-                                    }
-                                });
-                            $('body').removeClass('swal2-height-auto');
-                        }
-                    }, 1000);
+            if (!$('#code_txt:visible').length) {
+                setTimeout(async () => {
+                    if (!this.isLogin()) {
+                        Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info');
+                        $('body').removeClass('swal2-height-auto');
+                    } else if ($('div.error-content:visible').length) {
+                    } else {
+                        this.hideTip();
+                        this.getFileInfo();
+                        if (flag) t.info('\u5c01\u5370\u89e3\u9664\uff01');
+                    }
                 }, 1000);
+
             } else {
-                t.info('\u63a8\u8350\u4f7f\u7528<\u94fe\u63a5\u52a9\u624b>', '\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801');
+                t.info('\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801', 'info', '\u63a8\u8350\u4f7f\u7528<\u94fe\u63a5\u52a9\u624b>');
+                
                 $('a.btn-primary').click(() => {
                     setTimeout(() => {
-                        if ($('div.file-item-container').children().length) {
+                        if ($('div.file-operate:visible').length) {
                             if (this.isLogin()) location.reload();
                             else {
-                                Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info')
-                                .then(result => {
-                                    if (result.isConfirmed) {
-                                        let account = $('#J_UserAccount');
-                                        if (account.text() == '\u767b\u5f55') account.click();
-                                    }
-                                });
+                                Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info');
                                 $('body').removeClass('swal2-height-auto');
                             }
                         }
@@ -474,13 +345,16 @@ void function() {
                 });
                 
                 $('#code_txt').one('focus', () => {
-                    if ($('div.link-helper').length) $('div.link-helper').show();
-                    else $('div.access-code-item').append('<div class="link-helper tips-save-box" style="left:50px;top:200px;visibility:visible;position:absolute;display:inline-block;"><p style="font-size:16px;">\u8bd5\u8bd5\u80fd\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801\u7684\ud83d\udc49<a target="_blank" href="https://greasyfork.org/zh-CN/scripts/422773-%E9%93%BE%E6%8E%A5%E5%8A%A9%E6%89%8B" style="color:#36BE63;position:relative;display:inline;top:0;left:0;text-decoration:underline;">\u94fe\u63a5\u52a9\u624b</a></p><img src="../source/images/tips_save.png"><a href="javascript:;" title="\u5173\u95ed"></a></div>');
+                    let tip = $('div.tips-save-box').clone(true, true).css({top: '230px', left: '50px'})
+                    tip.children('p').css({width: '110px', top: '35px', left: '8px'}).html('\u8bd5\u8bd5\u80fd\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801\u7684\ud83d\udc49<a target="_blank" href="https://greasyfork.org/zh-CN/scripts/422773-%E9%93%BE%E6%8E%A5%E5%8A%A9%E6%89%8B" style="color:#2b89ea;position:relative;display:inline;top:0;left:0;text-decoration:underline;">\u94fe\u63a5\u52a9\u624b</a>');
+                    tip.children('img').prop('alt', '\u94fe\u63a5\u52a9\u624b');
+                    tip.children('a').click(o => $(o.target).parent().hide());
+                    $('div.access-code-item').append(tip);
                 });
             }
         },
     };
     
-    main.init();
+    setTimeout(() => main.init(), 1500);
     
 }();
