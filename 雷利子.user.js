@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.2.9
+// @version     0.3.1
 // @author      一个北七
-// @description 突破新版天翼云盘网页版单文件、多文件分享页、个人主页的文件大小下载限制
+// @description 突破新版天翼云盘单文件、多文件分享页、个人主页的文件大小下载限制
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
 // @created     2021/3/13 下午6:23:05
 // @include     http*://cloud.189.cn/*
@@ -31,7 +31,7 @@ void function() {
         clog() {
                 console.group('[\u96f7\u5229\u5b50]');
                 for (let m of arguments) {
-                    if (void 0 !== m) console.log(m);
+                    if (void 0 !== m) console.dir(m);
                 }
                 console.groupEnd();
         },
@@ -90,16 +90,18 @@ void function() {
         },
         
         info(text, icon='success', title = '\u96f7\u5229\u5b50', position='top', timer=2000) {
-            if (icon == 'error') timer = timer == 2000 ? 3000 : timer;
-            return Swal.fire({
-                      position,
-                      icon,
-                      toast: true,
-                      title,
-                      text,
-                      showConfirmButton: false,
-                      timer
-                    });
+            if (flag) {
+                if (icon == 'error') timer = timer == 2000 ? 3000 : timer;
+                return Swal.fire({
+                          position,
+                          icon,
+                          toast: true,
+                          title,
+                          text,
+                          showConfirmButton: false,
+                          timer
+                        });
+            }
         },
     };
     
@@ -132,6 +134,7 @@ void function() {
                 this._get(api[1], {shareCode: code},
                     res => {
                         if (res.isFolder) {
+                            this.alwaysList();
                             this.multiShare(res.shareId);
                             
                             $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
@@ -144,16 +147,18 @@ void function() {
                         } else if(res.fileSize > sizeLimit){
                             this.singleShare(res.fileId, res.shareId);
                         } else
-                            $('a.btn-download').removeAttr('target').text(buttonText).css(buttonStyle);
+                            $('a[class="btn btn-download"]').removeAttr('target').text(buttonText).css(buttonStyle);
                     },
                     err => {
                         t.clog('error:', err);
                     });
             } else {
+                this.alwaysList();
                 this.mainPage();
                 
                 $('li.title-message,\
                 div.nav-logo,\
+                li.title-link.title-return,\
                 li.menu-item:contains(" \u4e91\u76d8 ")').on('click',
                 o => {
                     setTimeout(() => this.mainPage(), 1000);
@@ -177,13 +182,13 @@ void function() {
         
         directDownload(time = 1000, delay = 1000) {
             let items = $('li.c-file-item.selected:not([data-isfolder])');
-            if (items.length) {
+            if (items.length === 1) {
                 items.each((i, e) => {
                     setTimeout(() => {
                         $(e).find('span.file-item-ope-item-download').click();
                     }, time += delay);
                 });
-            }
+            } else if (items.length > 1) t.info('\u6682\u4e0d\u652f\u6301\u591a\u9009\u6587\u4ef6\u76f4\u63a5\u4e0b\u8f7d\uff01', 'info');
             else t.info('\u9009\u4e2d\u4e3a\u6587\u4ef6\u5939\uff0c\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info');
         },
         
@@ -200,24 +205,26 @@ void function() {
         singleShare(fileId, shareId) {
             this._get(api[2], {fileId, shareId, dt: 1},
                       res => {
-                        let link = $('a.btn-download').clone()
+                        let link = $('a[class="btn btn-download"]').clone()
                                     .prop('href', res.fileDownloadUrl)
                                     .removeAttr('target')
                                     .text(buttonText)
                                     .css(buttonStyle);
-                        $('a.btn-download').replaceWith(link);
+                        $('a[class="btn btn-download"]').replaceWith(link);
                         t.increase();
-                        t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01');
+                        setTimeout(() => t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01'), 1000);
                      },
                      err => {
                         t.clog('error', err);
-                        t.info('\u83b7\u53d6\u4e0b\u8f7d\u76f4\u94fe\u5931\u8d25\uff01', 'error');
+                        setTimeout(() => t.info('\u83b7\u53d6\u4e0b\u8f7d\u76f4\u94fe\u5931\u8d25\uff01', 'error'), 1000);
                      });
         },
         
         replaceDownload(o, shareId) {
             let fileId = $(o.target).parents('li').attr('data-fileid');
-            let e = o.currentTarget, result = e.title.match(/&expired=(\d+)&/),
+            let e = o.currentTarget,
+                href = $(e).data('href'),
+                result = href ? href.match(/&expired=(\d+)&/) : 0,
                 time = new Date(Number(result && result[1]));
             if (time < new Date) {
                 this._get(api[2], {fileId, shareId, dt: 1},
@@ -290,7 +297,6 @@ void function() {
                                                         setTimeout(() => this.mainPage(), 1000);
                                                     });
                                                 }, 1000);
-                                                
                                             });
                                             
                                         } else {
@@ -315,6 +321,15 @@ void function() {
                 }
         },
         
+        alwaysList() {
+            let display = $('div.FileListHead_file-list-head_1S00s>div:last');
+            if (display.children('div').length) {
+                display.find('div[title="点击切换到图标模式"]:contains("列表"):visible').click();
+            } else if (display.text().trim() === '图标') {
+                display.click();
+            }
+        },
+        
         init() {
             if (!$('#code_txt:visible').length) {
                 setTimeout(async () => {
@@ -325,7 +340,7 @@ void function() {
                     } else {
                         this.hideTip();
                         this.getFileInfo();
-                        if (flag) t.info('\u5c01\u5370\u89e3\u9664\uff01');
+                        t.info('\u5c01\u5370\u89e3\u9664\uff01');
                     }
                 }, 1000);
 
