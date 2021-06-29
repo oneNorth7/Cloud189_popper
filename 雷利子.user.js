@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.3.1
+// @version     0.3.2
 // @author      一个北七
-// @description 突破新版天翼云盘单文件、多文件分享页、个人主页的文件大小下载限制
+// @description 突破新版天翼云盘单文件、多文件分享页、个人主页的文件大小下载限制；选中多个文件逐一直接下载，高速高效无需客户端
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
 // @created     2021/3/13 下午6:23:05
 // @include     http*://cloud.189.cn/*
@@ -140,7 +140,10 @@ void function() {
                             $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
                                 setTimeout(() => {
                                     let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
-                                    button.remove();
+                                    if (!$(`div.button-normal:contains("${buttonText}")`).length) {
+                                        let another = button.clone().text(buttonText).css(buttonStyle).click(() => this.directDownload());
+                                        button.replaceWith(another);
+                                    }
                                 }, 500);
                             });
                             
@@ -167,11 +170,14 @@ void function() {
                 $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
                     setTimeout(() => {
                         let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
-                        button.remove();
+                        if (!$(`div.button-normal:contains("${buttonText}")`).length) {
+                            let another = button.clone().text(buttonText).css(buttonStyle).click(() => this.directDownload());
+                            button.replaceWith(another);
+                        }
                         
                         let menu = $('div[class^="menu_menu-block-item_"]:contains("\u4e0b\u8f7d")');
                         if (!$(`div[class^="menu_menu-block-item_"]:contains("${buttonText}")`).length) {
-                            let another = menu.clone().text(buttonText).click(this.directDownload);
+                            let another = menu.clone().text(buttonText).click(() => this.directDownload());
                             menu.replaceWith(another);
                         }
                     }, 500);
@@ -180,16 +186,51 @@ void function() {
             
         },
         
-        directDownload(time = 1000, delay = 1000) {
+        directDownload(time = 500, delay = 500) {
             let items = $('li.c-file-item.selected:not([data-isfolder])');
-            if (items.length === 1) {
+            if (items.length > 10) {
+                Swal.fire({
+                          title: `\u5df2\u9009\u4e2d${items.length}\u4e2a\u6587\u4ef6\uff0c\u6570\u91cf\u8d85\u8fc710`,
+                          html: '<p style="color: red">\u662f\u5426\u5168\u90e8\u9010\u4e00\u4e0b\u8f7d\uff1f</p>',
+                          icon: 'warning',
+                          showCancelButton: true,
+                          allowOutsideClick: false,
+                          confirmButtonColor: '#d33',
+                          confirmButtonText: '\u786e\u5b9a\u5168\u90e8\u4e0b\u8f7d',
+                          cancelButtonColor: '#3085d6',
+                          cancelButtonText: '\u53d6\u6d88\u4e0b\u8f7d',
+                        }).then(result => {
+                            if (result.isConfirmed) {
+                                items.each((i, e) => {
+                                    setTimeout(() => {
+                                        $(e).find('span.file-item-ope-item-download').click();
+
+                                        if (items.length === i + 1) {
+                                            if ($('li.c-file-item.selected[data-isfolder]').length)
+                                                setTimeout(() => {
+                                                    t.info('\u9009\u4e2d\u7684\u6587\u4ef6\u5939\u5df2\u8df3\u8fc7\uff0c\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info');
+                                                }, 1000);
+                                        }
+                                    }, time += delay);
+                                });
+                                
+                                t.info('\u5168\u90e8\u6587\u4ef6\u5f00\u59cb\u9010\u4e00\u4e0b\u8f7d');
+                                
+                            }
+                        });
+            } else if (items.length > 0) {
                 items.each((i, e) => {
                     setTimeout(() => {
                         $(e).find('span.file-item-ope-item-download').click();
+
+                        if (items.length === i + 1) {
+                            if ($('li.c-file-item.selected[data-isfolder]').length)
+                                t.info('\u9009\u4e2d\u7684\u6587\u4ef6\u5939\u5df2\u8df3\u8fc7\uff0c\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info');
+                        }
                     }, time += delay);
                 });
-            } else if (items.length > 1) t.info('\u6682\u4e0d\u652f\u6301\u591a\u9009\u6587\u4ef6\u76f4\u63a5\u4e0b\u8f7d\uff01', 'info');
-            else t.info('\u9009\u4e2d\u4e3a\u6587\u4ef6\u5939\uff0c\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info');
+            } else if ($('li.c-file-item.selected[data-isfolder]').length)
+                t.info('\u9009\u4e2d\u7684\u6587\u4ef6\u5939\u5df2\u8df3\u8fc7\uff0c\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info');
         },
         
         _get(url, data, success, error = () => {}) {
@@ -235,7 +276,6 @@ void function() {
                             $(document.head).append(iframe);
                             if (Number($(e).parents('div.file-item-name').next().text().replace('G', '')) > 1) {
                                 t.increase();
-                                t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01');
                             }
                           },
                           err => {
@@ -307,7 +347,6 @@ void function() {
                                                     let iframe = $(`<iframe src="${d.downloadUrl}" style="display: none;"></iframe>`);
                                                     $(document.head).append(iframe);
                                                     t.increase();
-                                                    t.info('\u6210\u529f\u7a81\u7834\u6587\u4ef6\u5927\u5c0f\u4e0b\u8f7d\u9650\u5236\uff01');
                                                 });
                                                 span.replaceWith(another);
                                             }
@@ -324,8 +363,8 @@ void function() {
         alwaysList() {
             let display = $('div.FileListHead_file-list-head_1S00s>div:last');
             if (display.children('div').length) {
-                display.find('div[title="点击切换到图标模式"]:contains("列表"):visible').click();
-            } else if (display.text().trim() === '图标') {
+                display.find('div[title="\u70b9\u51fb\u5207\u6362\u5230\u56fe\u6807\u6a21\u5f0f"]:contains("\u5217\u8868"):visible').click();
+            } else if (display.text().trim() === '\u56fe\u6807') {
                 display.click();
             }
         },
