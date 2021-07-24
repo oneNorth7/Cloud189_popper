@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.3.3
+// @version     0.3.4
 // @author      一个北七
 // @description 突破新版天翼云盘单文件、多文件分享页、个人主页的文件大小下载限制；选中多个文件逐一直接下载，高速高效无需客户端
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
 // @created     2021/3/13 下午6:23:05
-// @include     http*://cloud.189.cn/*
+// @match       *://cloud.189.cn/web/share?code=*
+// @match       *://cloud.189.cn/web/main/file/folder/*
 // @compatible  chrome 69+
 // @compatible  firefox 78+
 // @compatible  edge Latest
@@ -133,12 +134,23 @@ void function() {
             if (code) {
                 this._get(api[1], {shareCode: code},
                     res => {
-                        $('ul.file-list-ul').data('shareId', res.shareId);
+                        let section = $('section.c-file-list');
+                        section.data('shareId', res.shareId);
+                    
                         if (res.isFolder) {
-                            this.alwaysList();
+                            // this.alwaysList();
                             this.multiShare(res.shareId);
                             
-                            $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
+                            let attrs = section[0].attributes, data='';
+
+                            for (let i = attrs.length - 1; i >= 0 ; i--) {
+                                if (attrs[i].nodeName.startsWith('data-v-')) {
+                                    data = attrs[i].nodeName + '=""';
+                                    break;
+                                }
+                            }
+                            
+                            section.delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
                                 setTimeout(() => {
                                     let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
                                     if (!$(`div.button-normal:contains("${buttonText}")`).length) {
@@ -157,34 +169,16 @@ void function() {
                         t.clog('error:', err);
                     });
             } else {
-                this.alwaysList();
                 this.mainPage();
-                
-                $('li.title-message,\
-                div.nav-logo,\
-                li.title-link.title-return,\
-                li.menu-item:contains(" \u4e91\u76d8 ")').on('click',
-                o => {
-                    setTimeout(() => this.mainPage(), 1000);
-                });
-                
-                $('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
-                    setTimeout(() => {
-                        let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
-                        if (!$(`div.button-normal:contains("${buttonText}")`).length) {
-                            let another = button.clone().text(buttonText).css(buttonStyle).click(() => this.directDownload());
-                            button.replaceWith(another);
-                        }
-                        
-                        let menu = $('div[class^="menu_menu-block-item_"]:contains("\u4e0b\u8f7d")');
-                        if (!$(`div[class^="menu_menu-block-item_"]:contains("${buttonText}")`).length) {
-                            let another = menu.clone().text(buttonText).click(() => this.directDownload());
-                            menu.replaceWith(another);
-                        }
-                    }, 500);
-                });
             }
             
+            $('li.title-message,\
+			div.nav-logo,\
+			li.title-link.title-return,\
+			li.menu-item:contains(" \u4e91\u76d8 ")').on('click',
+			o => {
+				setTimeout(() => this.mainPage(), 1000);
+			});
         },
         
         directDownload(time = 500, delay = 500) {
@@ -215,8 +209,8 @@ void function() {
         },
         
         download(i, e, l) {
-            this.replaceDownload($(e).children('input'), $('ul.file-list-ul').data('shareId'));
-
+            this.replaceDownload($(e).children('input'), $('section.c-file-list').data('shareId'));
+            
             if (l === i + 1) {
                 if ($('li.c-file-item.selected[data-isfolder]').length)
                     setTimeout(() => {
@@ -241,13 +235,12 @@ void function() {
                         let saveBox = $('div.save-box'),
                             attrs = saveBox[0].attributes,
                             link = null;
-                        t.clog(attrs);
+
                         for (let i = 0; i < attrs.length; i++) {
                             if (attrs[i].nodeName.startsWith('data-v-')) {
-                                link = $(`<a ${attrs[i].nodeName}="" class="btn btn-download" style="background-color: rgb(54, 190, 99); color: white;">直接下载</a>`);
+                                link = $(`<a ${attrs[i].nodeName}="" class="btn btn-download">直接下载</a>`).css(buttonStyle);
                                 break;
                             }
-                                
                         }
                         saveBox.after(link.prop('href', res.fileDownloadUrl));
                         t.increase();
@@ -288,7 +281,7 @@ void function() {
         },
         
         multiShare(shareId) {
-            $('ul.file-list-ul>li').each((i, e) => {
+            let dealLi = e => {
                 if ($(e).attr('data-isfolder')) {
                     $(e).find('span.file-item-name-fileName-span').one('click',
                     o => {
@@ -313,55 +306,78 @@ void function() {
                             span.parent().next().html(another);
                     }  
                 }
+            }
+            
+            $('ul.file-list-ul>li').each((i, e) => dealLi(e));
+            
+            $('ul.file-list-ul').on('DOMNodeInserted', o => {
+                dealLi(o.target);
             });
         },
         
         mainPage() {
+			this.alwaysList();			
             let folderId = location.pathname.match('/web/main/file/folder/(-?\\d+)$');
-                if(folderId) {
-                    let fileId = folderId[1];
-                    this._get(api[3], {fileId},
-                             res => {
-                                let {data} = res;
-                                if (data) {
-                                    for (let d of data) {
-                                        let li = $(`li[data-fileId="${d.fileId}"]`);
-                                        if (d.isFolder) {
-                                            let span = li.find('div.file-item-ope-item>span.file-item-ope-item-download');
-                                            if (span.length) {
-                                                let link = $('<a></a>').append(span.clone().prop('title', '\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01')).click(o => t.info('\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info'));
-                                                span.replaceWith(link);
-                                            }
-                                            
-                                            li.find('span.file-item-name-fileName-span').one('click', o => {
-                                                setTimeout(() => {
-                                                    this.mainPage();
-                                                    $('div.FileListHead_file-list-nav_1Yc_- span[class^="FileListHead_file-list-nav-"]')
-                                                    .on('click', o => {
-                                                        setTimeout(() => this.mainPage(), 1000);
-                                                    });
-                                                }, 1000);
-                                            });
-                                            
-                                        } else {
-                                            let span = li.find('span.file-item-ope-item-download').prop('title', buttonText);
-                                            if (d.fileSize > sizeLimit) {
-                                                
-                                                let another = span.clone().click(o => {
-                                                    let iframe = $(`<iframe src="${d.downloadUrl}" style="display: none;"></iframe>`);
-                                                    $(document.head).append(iframe);
-                                                    t.increase();
-                                                });
-                                                span.replaceWith(another);
-                                            }
-                                        }
-                                    }
-                                }
-                             },
-                             err => {
-                                t.clog('error', err);
-                             });
-                }
+			if(folderId) {
+				let fileId = folderId[1];
+				this._get(api[3], {fileId},
+						 res => {
+							let {data} = res;
+							if (data) {
+								for (let d of data) {
+									let li = $(`li[data-fileId="${d.fileId}"]`);
+									if (d.isFolder) {
+										let span = li.find('div.file-item-ope-item>span.file-item-ope-item-download');
+										if (span.length) {
+											let link = $('<a></a>').append(span.clone().prop('title', '\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01')).click(o => t.info('\u8bf7\u8fdb\u5165\u76ee\u5f55\u4e0b\u8f7d\uff01', 'info'));
+											span.replaceWith(link);
+										}
+										
+										li.find('span.file-item-name-fileName-span').one('click', o => {
+											setTimeout(() => {
+												this.mainPage();
+												$('div.FileListHead_file-list-nav_1Yc_- span[class^="FileListHead_file-list-nav-"]')
+												.on('click', o => {
+													setTimeout(() => this.mainPage(), 1000);
+												});
+											}, 1000);
+										});
+										
+									} else {
+										let span = li.find('span.file-item-ope-item-download').prop('title', buttonText);
+										if (d.fileSize > sizeLimit) {
+											
+											let another = span.clone().click(o => {
+												let iframe = $(`<iframe src="${d.downloadUrl}" style="display: none;"></iframe>`);
+												$(document.head).append(iframe);
+												t.increase();
+											});
+											span.replaceWith(another);
+										}
+									}
+								}
+							}
+						 },
+						 err => {
+							t.clog('error', err);
+						 });
+			}
+                
+			$('section.c-file-list').delegate('li, label.ant-checkbox-wrapper', 'mousedown', o => {
+				setTimeout(() => {
+					let button = $('div.button-normal:contains("\u4e0b\u8f7d")');
+					if (!$(`div.button-normal:contains("${buttonText}")`).length) {
+						let another = button.clone().text(buttonText).css(buttonStyle).click(() => this.directDownload());
+						button.replaceWith(another);
+					}
+					
+					let menu = $('div[class^="menu_menu-block-item_"]:contains("\u4e0b\u8f7d")');
+					if (!$(`div[class^="menu_menu-block-item_"]:contains("${buttonText}")`).length) {
+						let another = menu.clone().text(buttonText).click(() => this.directDownload());
+						menu.replaceWith(another);
+					}
+				}, 500);
+			});
         },
         
         alwaysList() {
