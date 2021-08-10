@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.3.4
+// @version     0.3.5
 // @author      一个北七
 // @description 突破新版天翼云盘单文件、多文件分享页、个人主页的文件大小下载限制；选中多个文件逐一直接下载，高速高效无需客户端
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
 // @created     2021/3/13 下午6:23:05
 // @match       *://cloud.189.cn/web/share?code=*
 // @match       *://cloud.189.cn/web/main/file/folder/*
+// @match       *://cloud.189.cn/web/main/recentlyUploaded*
 // @compatible  chrome 69+
 // @compatible  firefox 78+
 // @compatible  edge Latest
@@ -159,26 +160,75 @@ void function() {
                                     }
                                 }, 500);
                             });
-                            
+
+                            $('div[class^="FileListHead_file-list-head_"]>div:last')
+                            .on('click', o => {
+								setTimeout(() => this.multiShare(res.shareId), 1000);
+							});
+							
                         } else if(res.fileSize > sizeLimit){
+							$('div.outlink-box-s:hidden').show();
                             this.singleShare(res.fileId, res.shareId);
-                        } else
+                            
+                        } else {
+							$('div.outlink-box-s:hidden').show();
                             $('a[class="btn btn-download"]').removeAttr('target').text(buttonText).css(buttonStyle);
+						}
                     },
                     err => {
                         t.clog('error:', err);
                     });
             } else {
+                this.alwaysList();
                 this.mainPage();
+                
+                $('div[class^="DirectoryTree_directory-li_"]').delegate('span.directory-name', 'click',
+                o => {
+                    setTimeout(() => {
+                        this.mainPage();
+                        $('span[class^="FileListHead_file-list-nav-"]')
+                        .on('click', o => {
+                            setTimeout(() => this.mainPage(), 1000);
+                        });
+                    }, 1000);
+                });
+                
+                $('div[class^="FileListHead_file-list-head_"]>div:last')
+				.on('click', o => {
+					setTimeout(() => this.mainPage(), 1000);
+				});
+                
+                let recent = () => {
+                    $('div.uploadList').delegate('div.uploadPath>a', 'click', o => {
+                        setTimeout(() => {
+                            this.mainPage();
+                            $('span[class^="FileListHead_file-list-nav-"]')
+                             .on('click', o => {
+                                 setTimeout(() => this.mainPage(), 1000);
+                             });
+                        }, 1000);
+                    });
+                };
+                
+                $('li.title-link.title-recentupload').on('click', o => {
+                   setTimeout(() => recent(), 1000);
+                });
+                
+                if (location.pathname.match('\\/web\\/main\\/recentlyUploaded.*')) {
+                    setTimeout(() => recent(), 1000);
+                }
             }
             
             $('li.title-message,\
 			div.nav-logo,\
 			li.title-link.title-return,\
-			li.menu-item:contains(" \u4e91\u76d8 ")').on('click',
-			o => {
+			li.menu-item:contains(" \u4e91\u76d8 "),\
+            div[class^="FileListHead_typeListItem_"],\
+            span[class^="FileListHead_file-list-nav-"]')
+            .on('click', o => {
 				setTimeout(() => this.mainPage(), 1000);
 			});
+			
         },
         
         directDownload(time = 500, delay = 500) {
@@ -288,7 +338,7 @@ void function() {
                         setTimeout(() => {
                             this.multiShare(shareId);
                             
-                            $('div.FileListHead_file-list-nav_1Yc_- span[class^="FileListHead_file-list-nav-"]')
+                            $('span[class^="FileListHead_file-list-nav-')
                             .on('click', o => {
                                 setTimeout(() => this.multiShare(shareId), 1000);
                             });
@@ -316,7 +366,6 @@ void function() {
         },
         
         mainPage() {
-			this.alwaysList();			
             let folderId = location.pathname.match('/web/main/file/folder/(-?\\d+)$');
 			if(folderId) {
 				let fileId = folderId[1];
@@ -336,7 +385,7 @@ void function() {
 										li.find('span.file-item-name-fileName-span').one('click', o => {
 											setTimeout(() => {
 												this.mainPage();
-												$('div.FileListHead_file-list-nav_1Yc_- span[class^="FileListHead_file-list-nav-"]')
+												$('span[class^="FileListHead_file-list-nav-')
 												.on('click', o => {
 													setTimeout(() => this.mainPage(), 1000);
 												});
@@ -381,7 +430,7 @@ void function() {
         },
         
         alwaysList() {
-            let display = $('div.FileListHead_file-list-head_1S00s>div:last');
+            let display = $('div[class^="FileListHead_file-list-head_"]>div:last');
             if (display.children('div').length) {
                 display.find('div[title="\u70b9\u51fb\u5207\u6362\u5230\u56fe\u6807\u6a21\u5f0f"]:contains("\u5217\u8868"):visible').click();
             } else if (display.text().trim() === '\u56fe\u6807') {
