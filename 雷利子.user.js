@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        雷利子
 // @namespace   https://github.com/oneNorth7/Cloud189_popper
-// @version     0.3.5
+// @version     0.3.6
 // @author      一个北七
 // @description 突破新版天翼云盘单文件、多文件分享页、个人主页的文件大小下载限制；选中多个文件逐一直接下载，高速高效无需客户端
 // @icon        https://gitee.com/oneNorth7/pics/raw/master/picgo/pentagram-devil.png
@@ -439,45 +439,47 @@ void function() {
         },
         
         init() {
-            if (!$('#code_txt:visible').length) {
-                setTimeout(async () => {
-                    if (!this.isLogin()) {
-                        Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info');
-                        $('body').removeClass('swal2-height-auto');
-                    } else if ($('div.error-content:visible').length) {
-                    } else {
-                        this.hideTip();
-                        this.getFileInfo();
-                        t.info('\u5c01\u5370\u89e3\u9664\uff01');
-                    }
-                }, 1000);
+			if (!$('div.error-content:visible').length) {
+				if (!$('#code_txt:visible').length) {
+					setTimeout(async () => {
+						if (!this.isLogin()) {
+							Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info');
+							$('body').removeClass('swal2-height-auto');
+						} else {
+							this.hideTip();
+							this.getFileInfo();
+							t.info('\u5c01\u5370\u89e3\u9664\uff01');
+						}
+					}, 1000);
 
-            } else {
-                t.info('\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801', 'info', '\u63a8\u8350\u4f7f\u7528<\u94fe\u63a5\u52a9\u624b>');
-                
-                $('a.btn-primary').click(() => {
-                    setTimeout(() => {
-                        if ($('div.file-operate:visible').length) {
-                            if (this.isLogin()) location.reload();
-                            else {
-                                Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info');
-                                $('body').removeClass('swal2-height-auto');
-                            }
-                        }
-                    }, 500);
-                });
-                
-                $('#code_txt').one('focus', () => {
-                    let tip = $('div.tips-save-box').clone(true, true).css({top: '230px', left: '50px'})
-                    tip.children('p').css({width: '110px', top: '35px', left: '8px'}).html('\u8bd5\u8bd5\u80fd\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801\u7684\ud83d\udc49<a target="_blank" href="https://greasyfork.org/zh-CN/scripts/422773-%E9%93%BE%E6%8E%A5%E5%8A%A9%E6%89%8B" style="color:#2b89ea;position:relative;display:inline;top:0;left:0;text-decoration:underline;">\u94fe\u63a5\u52a9\u624b</a>');
-                    tip.children('img').prop('alt', '\u94fe\u63a5\u52a9\u624b');
-                    tip.children('a').click(o => $(o.target).parent().hide());
-                    $('div.access-code-item').append(tip);
-                });
-            }
+				} else {
+					t.info('\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801', 'info', '\u63a8\u8350\u4f7f\u7528<\u94fe\u63a5\u52a9\u624b>');
+					
+					$('a.btn-primary').click(() => {
+						setTimeout(() => {
+							if ($('div.file-operate:visible').length) {
+								if (this.isLogin()) location.reload();
+								else {
+									Swal.fire('\u8bf7\u5148\u767b\u5f55\uff01', '\u5fc5\u987b\u767b\u5f55\u624d\u80fd\u7a81\u7834\u4e0b\u8f7d\u9650\u5236', 'info');
+									$('body').removeClass('swal2-height-auto');
+								}
+							}
+						}, 500);
+					});
+					
+					$('#code_txt').one('focus', () => {
+						let tip = $('div.tips-save-box').clone(true, true).css({top: '230px', left: '50px'})
+						tip.children('p').css({width: '110px', top: '35px', left: '8px'}).html('\u8bd5\u8bd5\u80fd\u81ea\u52a8\u586b\u5199\u7f51\u76d8\u5bc6\u7801\u7684\ud83d\udc49<a target="_blank" href="https://greasyfork.org/zh-CN/scripts/422773-%E9%93%BE%E6%8E%A5%E5%8A%A9%E6%89%8B" style="color:#2b89ea;position:relative;display:inline;top:0;left:0;text-decoration:underline;">\u94fe\u63a5\u52a9\u624b</a>');
+						tip.children('img').prop('alt', '\u94fe\u63a5\u52a9\u624b');
+						tip.children('a').click(o => $(o.target).parent().hide());
+						$('div.access-code-item').append(tip);
+					});
+				}
+			}
         },
     };
     
+    $('body').one('DOMNodeInserted', 'i.anticon-close-circle', o => $('div.outlink-box-s').length && $(o.target).parent('div:contains("暂不支持该格式在线预览或播放")').hide() && t.clog('移除提示'));
     setTimeout(() => main.init(), 1500);
     
 }();
